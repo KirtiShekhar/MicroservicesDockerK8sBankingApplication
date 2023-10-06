@@ -1,0 +1,168 @@
+version: "3.8"
+services:
+  mysql_database:
+    image: mysql:8.0
+    container_name: mysql-database-food-ordering
+    mem_limit: 700m
+    networks:
+      - banking-network
+    ports:
+      - 3307:3306
+    restart: always
+    environment:
+      MYSQL_DATABASE: microservicesdockercontainerkubernetes
+      MYSQL_USER: Kirti
+      MYSQL_PASSWORD: Kirti@02021997
+      MYSQL_ROOT_PASSWORD: Kirti@02021997
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    mem_limit: 700m
+    networks:
+      - banking-network
+    ports:
+      - 9411:9411
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.1
+    container_name: keycloak
+    command: ["start-dev", "--import-realm"]
+    mem_limit: 700m
+    networks:
+      - banking-network
+    ports:
+      - 1030:6369
+    restart: always
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+
+  microservices-banking-eureka-server:
+    image: kirtishekharpandey/microservices-banking-eureka-server:latest
+    container_name: microservices-banking-eureka-server
+    mem_limit: 700m
+    networks:
+      - banking-network
+    ports:
+      - 8761:8761
+    restart: unless-stopped
+    environment:
+      SPRING_APPLICATION_NAME: microservices-banking-eureka-server-project
+      SPRING_PROFILES_ACTIVE: default
+
+  microservices-banking-configuration-server:
+    image: kirtishekharpandey/microservices-banking-configuration-server:latest
+    container_name: microservices-banking-configuration-server
+    mem_limit: 700m
+    ports:
+      - 9924:9924
+    networks:
+      - banking-network
+    restart: unless-stopped
+    depends_on:
+      - microservices-banking-eureka-server
+    environment:
+      SPRING_APPLICATION_NAME: microservices-banking-configuration-server-project
+      SPRING_PROFILES_ACTIVE: git
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://microservices-banking-eureka-server:8761/eureka
+
+  microservices-banking-accounts-service:
+    image: kirtishekharpandey/microservices-banking-accounts-service:latest
+    container_name: microservices-banking-accounts-service
+    mem_limit: 700m
+    ports:
+      - 9911:9911
+    networks:
+      - banking-network
+    restart: unless-stopped
+    depends_on:
+      - mysql_database
+      - zipkin
+      - microservices-banking-configuration-server
+      - microservices-banking-eureka-server
+    environment:
+      SPRING_APPLICATION_NAME: microservices-banking-accounts-service-project
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: optional:configserver:http://microservices-banking-configuration-server:9924/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql_database:3306/microservicesdockercontainerkubernetes?autoReconnect=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: Kirti
+      SPRING_DATASOURCE_PASSWORD: Kirti@02021997
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://microservices-banking-eureka-server:8761/eureka
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+
+  microservices-banking-cards-service:
+    image: kirtishekharpandey/microservices-banking-cards-service:latest
+    container_name: microservices-banking-cards-service
+    mem_limit: 700m
+    ports:
+      - 9933:9933
+    networks:
+      - banking-network
+    restart: unless-stopped
+    depends_on:
+      - mysql_database
+      - zipkin
+      - microservices-banking-configuration-server
+      - microservices-banking-eureka-server
+    environment:
+      SPRING_APPLICATION_NAME: microservices-banking-cards-service-project
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: optional:configserver:http://microservices-banking-configuration-server:9924/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql_database:3306/microservicesdockercontainerkubernetes?autoReconnect=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: Kirti
+      SPRING_DATASOURCE_PASSWORD: Kirti@02021997
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://microservices-banking-eureka-server:8761/eureka
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+
+  microservices-banking-loans-service:
+    image: kirtishekharpandey/microservices-banking-loans-service:latest
+    container_name: microservices-banking-loans-service
+    mem_limit: 700m
+    ports:
+      - 9955:9955
+    networks:
+      - banking-network
+    restart: unless-stopped
+    depends_on:
+      - mysql_database
+      - zipkin
+      - microservices-banking-configuration-server
+      - microservices-banking-eureka-server
+    environment:
+      SPRING_APPLICATION_NAME: microservices-banking-loans-service-project
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: optional:configserver:http://microservices-banking-configuration-server:9924/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql_database:3306/microservicesdockercontainerkubernetes?autoReconnect=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: Kirti
+      SPRING_DATASOURCE_PASSWORD: Kirti@02021997
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://microservices-banking-eureka-server:8761/eureka
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+
+  microservices-banking-cloud-gateway-api:
+    image: kirtishekharpandey/microservices-banking-cloud-gateway-api:latest
+    container_name: microservices-banking-cloud-gateway-api
+    mem_limit: 700m
+    ports:
+      - 3366:3366
+    networks:
+      - banking-network
+    restart: unless-stopped
+    depends_on:
+      - zipkin
+      - keycloak
+      - microservices-banking-configuration-server
+      - microservices-banking-eureka-server
+      - microservices-banking-accounts-service
+      - microservices-banking-cards-service
+      - microservices-banking-loans-service
+    environment:
+      SPRING_APPLICATION_NAME: microservices-banking-cloud-gateway-api-project
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CONFIG_IMPORT: optional:configserver:http://microservices-banking-configuration-server:9924/
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://microservices-banking-eureka-server:8761/eureka
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
+
+networks:
+  banking-network:

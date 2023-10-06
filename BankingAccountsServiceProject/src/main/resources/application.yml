@@ -1,0 +1,32 @@
+server:
+  port: 9911
+spring:
+  application:
+    name: microservices-banking-accounts-service-project
+  profiles:
+    active: default
+  config:
+    activate:
+      on-profile: default
+    import:
+    - optional:configserver:http://localhost:9924
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 1000
+        max-interval: 2000
+        multiplier: 1.6
+        max-attempts: 6
+  datasource:
+    url: jdbc:mysql://mysql_database:3306/microservicesdockercontainerkubernetes
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: Kirti
+    password: Kirti@02021997
+  jpa:
+    hibernate:
+      ddl-auto: update
+management:
+  tracing:
+    sampling:
+      probability: 1.0 
